@@ -3420,12 +3420,14 @@ class P4Sync(Command, P4UserMap):
                             self.tempBranches.append(tempBranch)
                             self.checkpoint()
                             blob = self.searchParent(parent, branch, tempBranch)
-                        if blob:
-                            self.commit(description, filesForCommit, branch, blob)
+                            if blob:
+                                self.commit(description, filesForCommit, branch, blob)
+                            else:
+                                if self.verbose:
+                                    print("Parent of %s not found. Committing into head of %s" % (branch, parent))
+                                self.commit(description, filesForCommit, branch, parent)
                         else:
-                            if self.verbose:
-                                print("Parent of %s not found. Committing into head of %s" % (branch, parent))
-                            self.commit(description, filesForCommit, branch, parent)
+                            self.commit(description, filesForCommit, branch)
                 else:
                     files = self.extractFilesFromCommit(description)
                     self.commit(description, files, self.branch,
