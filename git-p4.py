@@ -2698,8 +2698,13 @@ class P4Sync(Command, P4UserMap):
         fnum = 0
         while "depotFile%s" % fnum in commit:
             path =  commit["depotFile%s" % fnum]
-            found = [p for p in self.depotPaths
-                     if p4PathStartsWith(path, p)]
+
+            if [p for p in self.cloneExclude
+                if p4PathStartsWith(path, p)]:
+                found = False
+            else:
+                found = [p for p in self.depotPaths
+                         if p4PathStartsWith(path, p)]
             if not found:
                 fnum = fnum + 1
                 continue
