@@ -2624,15 +2624,16 @@ class P4Sync(Command, P4UserMap):
         while "depotFile%s" % fnum in commit:
             path =  commit["depotFile%s" % fnum]
 
-            if [p for p in self.cloneExclude
-                if p4PathStartsWith(path, p)]:
-                found = False
-            else:
-                found = [p for p in self.depotPaths
-                         if p4PathStartsWith(path, p)]
-            if not found:
-                fnum = fnum + 1
-                continue
+            if not self.useClientSpec:
+                if [p for p in self.cloneExclude
+                    if p4PathStartsWith(path, p)]:
+                    found = False
+                else:
+                    found = [p for p in self.depotPaths
+                            if p4PathStartsWith(path, p)]
+                if not found:
+                    fnum = fnum + 1
+                    continue
 
             file = {}
             file["path"] = path
@@ -2643,6 +2644,11 @@ class P4Sync(Command, P4UserMap):
                 file["shelved_cl"] = int(shelved_cl)
             files.append(file)
             fnum = fnum + 1
+
+        if self.useClientSpec:
+            self.clientSpecDirs.update_client_spec_path_cache(files)
+            files = [f for f in files if self.clientSpecDirs.map_in_client(f['path'])]
+
         return files
 
     def extractJobsFromCommit(self, commit):
@@ -2691,9 +2697,6 @@ class P4Sync(Command, P4UserMap):
            branch it belongs."""
 
         files = self.extractFilesFromCommit(commit)
-
-        if self.clientSpecDirs:
-            self.clientSpecDirs.update_client_spec_path_cache(files)
 
         branches = {}
         for file in files:
