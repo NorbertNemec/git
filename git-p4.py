@@ -3405,12 +3405,11 @@ class P4Sync(Command, P4UserMap):
                         branch = self.gitRefForBranch(branch)
                         parent = self.gitRefForBranch(parent)
 
-                        if self.verbose:
-                            print("looking for initial parent for %s; current parent is %s" % (branch, parent))
-
                         if len(parent) == 0 and branch in self.initialParents:
                             parent = self.initialParents[branch]
                             del self.initialParents[branch]
+                            if self.verbose:
+                                print("Parent of %s not found. Using initial parent %s" % (branch, parent))
 
                         blob = None
                         if len(parent) > 0:
