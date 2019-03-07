@@ -2690,31 +2690,14 @@ class P4Sync(Command, P4UserMap):
         """Look at each depotFile in the commit to figure out to what
            branch it belongs."""
 
+        files = self.extractFilesFromCommit(commit)
+
         if self.clientSpecDirs:
-            files = self.extractFilesFromCommit(commit)
             self.clientSpecDirs.update_client_spec_path_cache(files)
 
         branches = {}
-        fnum = 0
-        while "depotFile%s" % fnum in commit:
-            path =  commit["depotFile%s" % fnum]
-
-            if [p for p in self.cloneExclude
-                if p4PathStartsWith(path, p)]:
-                found = False
-            else:
-                found = [p for p in self.depotPaths
-                         if p4PathStartsWith(path, p)]
-            if not found:
-                fnum = fnum + 1
-                continue
-
-            file = {}
-            file["path"] = path
-            file["rev"] = commit["rev%s" % fnum]
-            file["action"] = commit["action%s" % fnum]
-            file["type"] = commit["type%s" % fnum]
-            fnum = fnum + 1
+        for file in files:
+            path = file["path"]
 
             # start with the full relative path where this file would
             # go in a p4 client
