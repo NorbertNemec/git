@@ -3201,15 +3201,6 @@ class P4Sync(Command, P4UserMap):
                 # ignore will need to be removed manually.
                 system(["git", "config", "--add", "git-p4.ignoredP4Labels", name])
 
-    def guessProjectName(self):
-        for p in self.depotPaths:
-            if p.endswith("/"):
-                p = p[:-1]
-            p = p[p.strip().rfind("/") + 1:]
-            if not p.endswith("/"):
-               p += "/"
-            return p
-
     def getBranchMapping(self):
         lostAndFoundBranches = set()
 
@@ -3764,8 +3755,7 @@ class P4Sync(Command, P4UserMap):
             self.getLabels();
 
         if self.detectBranches:
-            ## FIXME - what's a P4 projectName ?
-            self.projectName = self.guessProjectName()
+            self.projectName = ""
 
             if self.hasOrigin:
                 self.getBranchMappingFromGitBranches()
