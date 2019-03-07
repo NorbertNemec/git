@@ -2985,20 +2985,24 @@ class P4Sync(Command, P4UserMap):
 
     def inClientSpec(self, path):
         if not self.clientSpecDirs:
-            return True
+            return path
         inClientSpec = self.clientSpecDirs.map_in_client(path)
-        if not inClientSpec and self.verbose:
+        if inClientSpec == "" and self.verbose:
             print('Ignoring file outside of client spec: {0}'.format(path))
-        return inClientSpec
+            return ""
+        return self.clientSpecDirs.client_prefix + inClientSpec
 
     def hasBranchPrefix(self, path):
+        if path == "":
+            return False
         if not self.branchPrefixes:
             return True
-        hasPrefix = [p for p in self.branchPrefixes
-                        if p4PathStartsWith(path, p)]
-        if not hasPrefix and self.verbose:
+        for p in self.branchPrefixes:
+            if p4PathStartsWith(path, p):
+                return True
+        if self.verbose:
             print('Ignoring file outside of prefix: {0}'.format(path))
-        return hasPrefix
+        return False
 
     def commit(self, details, files, branch, parent = "", allow_empty=False):
         epoch = details["time"]
@@ -3012,7 +3016,7 @@ class P4Sync(Command, P4UserMap):
             self.clientSpecDirs.update_client_spec_path_cache(files)
 
         files = [f for f in files
-            if self.inClientSpec(f['path']) and self.hasBranchPrefix(f['path'])]
+            if self.hasBranchPrefix(self.inClientSpec(f['path']))]
 
         if gitConfigBool('git-p4.keepEmptyCommits'):
             allow_empty = True
@@ -3371,7 +3375,10 @@ class P4Sync(Command, P4UserMap):
                     branches = self.splitFilesIntoBranches(description)
                     for branch in branches.keys():
                         ## HACK  --hwn
-                        branchPrefix = self.depotPaths[0] + branch + "/"
+                        if self.clientSpecDirs:
+                            branchPrefix = self.clientSpecDirs.client_prefix + branch + "/"
+                        else:
+                            branchPrefix = self.depotPaths[0] + branch + "/"
                         self.branchPrefixes = [ branchPrefix ]
 
                         parent = ""
