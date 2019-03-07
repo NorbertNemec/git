@@ -3375,6 +3375,8 @@ class P4Sync(Command, P4UserMap):
 
             if not self.silent:
                 sys.stdout.write("\rImporting revision %s (%s%%)" % (change, cnt * 100 / len(changes)))
+                if self.verbose:
+                    sys.stdout.write("\n")
                 sys.stdout.flush()
             cnt = cnt + 1
 
