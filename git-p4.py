@@ -958,8 +958,8 @@ def chooseBlockSize(blockSize):
     else:
         return defaultBlockSize
 
-def p4ChangesForPaths(depotPaths, changeRange, requestedBlockSize):
-    assert depotPaths
+def p4ChangesForPaths(selectPaths, changeRange, requestedBlockSize):
+    assert selectPaths
 
     # Parse the change range into start and end. Try to find integer
     # revision ranges as these can be broken up into blocks to avoid
@@ -999,7 +999,7 @@ def p4ChangesForPaths(depotPaths, changeRange, requestedBlockSize):
         else:
             revisionRange = "%s,%s" % (changeStart, changeEnd)
 
-        for p in depotPaths:
+        for p in selectPaths:
             cmd += ["%s...@%s" % (p, revisionRange)]
 
         # fetch the changes
@@ -3738,7 +3738,13 @@ class P4Sync(Command, P4UserMap):
                 if self.verbose:
                     print("Getting p4 changes for %s...%s" % (', '.join(self.depotPaths),
                                                               self.changeRange))
-                changes = p4ChangesForPaths(self.depotPaths, self.changeRange, self.changes_block_size)
+
+                if self.useClientSpec:
+                    selectPaths = [ self.clientSpecDirs.client_prefix ]
+                else:
+                    selectPaths = self.depotPaths
+                
+                changes = p4ChangesForPaths(selectPaths, self.changeRange, self.changes_block_size)
 
                 if len(self.maxChanges) > 0:
                     changes = changes[:min(int(self.maxChanges), len(changes))]
