@@ -3574,6 +3574,10 @@ class P4Sync(Command, P4UserMap):
                 if not self.silent:
                     print("Importing from/into multiple branches")
                 self.detectBranches = True
+
+            if len(self.p4BranchesInGit) > 0:
+                if not self.silent:
+                    print("Importing from/into pre-existing branches")
                 for branch in branches.keys():
                     self.initialParents[self.refPrefix + branch] = \
                         branches[branch]
