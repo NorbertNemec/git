@@ -3438,6 +3438,7 @@ class P4Sync(Command, P4UserMap):
                                 self.commit(description, filesForCommit, branch, parent)
                         else:
                             self.commit(description, filesForCommit, branch)
+                            self.checkpoint()
                 else:
                     files = self.extractFilesFromCommit(description)
                     self.commit(description, files, self.branch,
