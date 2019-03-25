@@ -3515,17 +3515,22 @@ class P4Sync(Command, P4UserMap):
                 system("git fetch origin")
 
     def importHeadRevision(self, revision):
-        print("Doing initial import of %s from revision %s into %s" % (' '.join(self.depotPaths), revision, self.branch))
+        if self.useClientSpec:
+            selectPaths = [ self.clientSpecDirs.client_prefix ]
+        else:
+            selectPaths = self.depotPaths
+
+        print("Doing initial import of %s from revision %s into %s" % (' '.join(selectPaths), revision, self.branch))
 
         details = {}
         details["user"] = "git perforce import user"
         details["desc"] = ("Initial import of %s from the state at revision %s\n"
-                           % (' '.join(self.depotPaths), revision))
+                           % (' '.join(selectPaths), revision))
         details["change"] = revision
         newestRevision = 0
 
         fileCnt = 0
-        fileArgs = ["%s...%s" % (p,revision) for p in self.depotPaths]
+        fileArgs = ["%s...%s" % (p,revision) for p in selectPaths]
 
         for info in p4CmdList(["files"] + fileArgs):
 
@@ -3535,7 +3540,7 @@ class P4Sync(Command, P4UserMap):
                 if info['data'].find("must refer to client") >= 0:
                     sys.stderr.write("This particular p4 error is misleading.\n")
                     sys.stderr.write("Perhaps the depot path was misspelled.\n");
-                    sys.stderr.write("Depot path:  %s\n" % " ".join(self.depotPaths))
+                    sys.stderr.write("Depot path:  %s\n" % " ".join(selectPaths))
                 sys.exit(1)
             if 'p4ExitCode' in info:
                 sys.stderr.write("p4 exitcode: %s\n" % info['p4ExitCode'])
