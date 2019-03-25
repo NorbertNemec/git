@@ -3752,7 +3752,10 @@ class P4Sync(Command, P4UserMap):
         self.depotPaths = newPaths
 
         # --detect-branches may change this for each branch
-        self.branchPrefixes = self.depotPaths
+        if self.useClientSpec:
+            self.branchPrefixes = []
+        else:
+            self.branchPrefixes = self.depotPaths
 
         self.loadUserMapFromCache()
         self.labels = {}
