@@ -2859,6 +2859,17 @@ class P4Sync(Command, P4UserMap):
                     os.getcwd(), required_bytes/1024/1024
                 )
 
+        if err and err.startswith("No Translation for parameter 'data' value '"):
+            if verbose:
+                sys.stderr.write('Correcting error about Translation on file: %s\n' % self.stream_file["depotFile"])
+            hex = err.split("'")[3]
+            import codecs
+            marshalled = {
+                "code": "text",
+                "data": codecs.getdecoder("hex")(hex)[0],
+            }
+            err = None
+
         if err:
             f = None
             if self.stream_have_file_info:
