@@ -389,6 +389,12 @@ def p4_last_change():
     results = p4CmdList(["changes", "-m", "1"], skip_info=True)
     return int(results[0]['change'])
 
+def p4_filelog_entry(depotPath, change):
+    cmd = ["filelog", "-s", "-m", "1"]
+    cmd += [ depotPath+"@"+str(change) ]
+    results = p4CmdList(cmd, skip_info=True)
+    return results
+
 def p4_describe(change, shelved=False):
     """Make sure it returns a valid result by checking for
        the presence of field "time".  Return a dict of the
@@ -3007,7 +3013,7 @@ class P4Sync(Command, P4UserMap):
             print('Ignoring file outside of prefix: {0}'.format(path))
         return False
 
-    def commit(self, details, files, branch, parent = "", allow_empty=False):
+    def commit(self, details, files, branch, parent = "", merges = [], allow_empty=False):
         epoch = details["time"]
         author = details["user"]
         jobs = self.extractJobsFromCommit(details)
@@ -3057,6 +3063,11 @@ class P4Sync(Command, P4UserMap):
             if self.verbose:
                 print("parent %s" % parent)
             self.gitStream.write("from %s\n" % parent)
+
+        for merge in merges:
+            if self.verbose:
+                print("merge %s" % merge)
+            self.gitStream.write("merge %s\n" % merge)
 
         self.streamP4Files(files)
         self.gitStream.write("\n")
@@ -3364,6 +3375,23 @@ class P4Sync(Command, P4UserMap):
         cnt = 1
         for change in changes:
             description = p4_describe(change)
+
+            """
+            desc = {}
+            for key in description.keys():
+                alpha = re.sub('[0-9]','',key)
+                num = re.sub('[a-zA-Z]','',key)
+                assert(key == alpha + num)
+                num = int('0' + num)
+                if not alpha in desc:
+                    desc[alpha] = {}
+                desc[alpha][num] = description[key]
+
+            for alpha in desc:
+                for num in sorted(desc[alpha])[:5]:
+                    print(alpha,num,":\t",desc[alpha][num])
+            """
+
             self.updateOptionDict(description)
 
             if not self.silent:
@@ -3391,6 +3419,43 @@ class P4Sync(Command, P4UserMap):
                         if self.verbose:
                             print("branch is %s" % branch)
 
+                        mergeSourceDepotPaths = []
+                        for f in filesForCommit:
+                            if f["action"] in [ "integrate", "branch" ]:
+                                filelog = p4_filelog_entry(f["path"], change)[0]
+
+                                assert(len(filelog) == 16)
+
+                                assert(filelog['code'] == 'stat')
+                                assert(filelog['depotFile'] == f["path"])
+
+                                assert(filelog['action0'] == f["action"])
+                                assert(filelog['change0'] == str(change))
+                                assert(filelog['client0'])
+                                assert(filelog['desc0'])
+                                assert(filelog['digest0'])
+                                assert(filelog['fileSize0'])
+                                assert(filelog['rev0'])
+                                assert(filelog['time0'])
+                                assert(filelog['type0'])
+                                assert(filelog['user0'])
+
+                                assert(filelog['erev0,0'])
+                                assert(filelog['file0,0'])
+                                assert(filelog['how0,0'])
+                                assert(filelog['srev0,0'])
+
+                                mergeSourceDepotPaths += [ filelog['file0,0'] ]
+
+                        mergeSourceBranches = set()
+                        if self.useClientSpec:
+                            self.clientSpecDirs.update_client_spec_path_cache([ { "path": p } for p in mergeSourceDepotPaths ])
+                            mergeSourceBranches = set(self.clientSpecDirs.map_in_client(p).split('/')[0] for p in mergeSourceDepotPaths)
+                        else:
+                            mergeSourceBranches = set(self.stripRepotPath(p, self.depotPaths).split('/')[0] for p in mergeSourceDepotPaths)
+                        mergeSourceBranches.discard("")
+                        mergeSourceBranches.discard(branch)
+
                         self.updatedBranches.add(branch)
 
                         if branch not in self.createdBranches:
@@ -3414,6 +3479,7 @@ class P4Sync(Command, P4UserMap):
 
                         branch = self.gitRefForBranch(branch)
                         parent = self.gitRefForBranch(parent)
+                        merges = [ self.gitRefForBranch(m) for m in mergeSourceBranches ]
 
                         if len(parent) == 0 and branch in self.initialParents:
                             parent = self.initialParents[branch]
@@ -3426,18 +3492,18 @@ class P4Sync(Command, P4UserMap):
                             tempBranch = "%s/%d" % (self.tempBranchLocation, change)
                             if self.verbose:
                                 print("Creating temporary branch: " + tempBranch)
-                            self.commit(description, filesForCommit, tempBranch)
+                            self.commit(description, filesForCommit, tempBranch, "", merges)
                             self.tempBranches.append(tempBranch)
                             self.checkpoint()
                             blob = self.searchParent(parent, branch, tempBranch)
                             if blob:
-                                self.commit(description, filesForCommit, branch, blob)
+                                self.commit(description, filesForCommit, branch, blob, merges)
                             else:
                                 if self.verbose:
                                     print("Parent of %s not found. Committing into head of %s" % (branch, parent))
-                                self.commit(description, filesForCommit, branch, parent)
+                                self.commit(description, filesForCommit, branch, parent, merges)
                         else:
-                            self.commit(description, filesForCommit, branch)
+                            self.commit(description, filesForCommit, branch, "", merges)
                             self.checkpoint()
                 else:
                     files = self.extractFilesFromCommit(description)
