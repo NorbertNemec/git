@@ -3385,6 +3385,15 @@ class P4Sync(Command, P4UserMap):
     def importChanges(self, changes, origin_revision=0):
         cnt = 1
         for change in changes:
+            if not self.silent:
+                sys.stdout.write("\rImporting revision %s (%s%%)" % (change, cnt * 100 / len(changes)))
+                if self.verbose:
+                    sys.stdout.write("\n")
+                sys.stdout.flush()
+            cnt = cnt + 1
+
+            starttime = time.time()
+
             description = p4_describe(change)
 
             """
@@ -3404,13 +3413,6 @@ class P4Sync(Command, P4UserMap):
             """
 
             self.updateOptionDict(description)
-
-            if not self.silent:
-                sys.stdout.write("\rImporting revision %s (%s%%)" % (change, cnt * 100 / len(changes)))
-                if self.verbose:
-                    sys.stdout.write("\n")
-                sys.stdout.flush()
-            cnt = cnt + 1
 
             try:
                 if self.detectBranches:
@@ -3525,6 +3527,12 @@ class P4Sync(Command, P4UserMap):
             except IOError:
                 print(self.gitError.read())
                 sys.exit(1)
+
+            if not self.silent:
+                if self.verbose:
+                    sys.stdout.write("\r")
+                finishtime = time.time()
+                sys.stdout.write("... finished revision %s (%f seconds)\n" % (change, finishtime - starttime))
 
     def sync_origin_only(self):
         if self.syncWithOrigin:
