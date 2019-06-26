@@ -624,17 +624,21 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
 
     cmd = p4_build_cmd(cmd)
     if verbose:
+        starttime = time.time()
         sys.stderr.write("Opening pipe: %s\n" % str(cmd))
 
     # Use a temporary file to avoid deadlocks without
     # subprocess.communicate(), which would put another copy
     # of stdout into memory.
     stdin_file = None
+    stdin_numlines = 0
     if stdin is not None:
         stdin_file = tempfile.TemporaryFile(prefix='p4-stdin', mode=stdin_mode)
         if isinstance(stdin,basestring):
+            stdin_numlines = len(stdin.split('\n'))
             stdin_file.write(stdin)
         else:
+            stdin_numlines = len(stdin)
             for i in stdin:
                 stdin_file.write(i + '\n')
         stdin_file.flush()
@@ -679,6 +683,10 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
             entry = {}
             entry["p4ExitCode"] = exitCode
             result.append(entry)
+
+    if verbose:
+        finishtime = time.time()
+        sys.stderr.write("Finished pipe (%f s, %i in, %i out)\n" % (finishtime - starttime, stdin_numlines, len(result)))
 
     return result
 
