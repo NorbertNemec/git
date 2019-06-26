@@ -1250,7 +1250,8 @@ class GitLFS(LargeFileSystem):
 
         pointerProcess = subprocess.Popen(
             ['git', 'lfs', 'pointer', '--file=' + contentFile],
-            stdout=subprocess.PIPE
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         pointerFile = pointerProcess.stdout.read()
         if pointerProcess.wait():
