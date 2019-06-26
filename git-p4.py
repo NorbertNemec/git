@@ -625,7 +625,11 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
     cmd = p4_build_cmd(cmd)
     if verbose:
         starttime = time.time()
-        sys.stderr.write("Opening pipe: %s\n" % str(cmd))
+        if isinstance(cmd,basestring):
+            cmdstr = cmd
+        else:
+            cmdstr = " ".join(cmd)
+        sys.stderr.write("Opening pipe: '%s'\n" % cmdstr)
 
     # Use a temporary file to avoid deadlocks without
     # subprocess.communicate(), which would put another copy
