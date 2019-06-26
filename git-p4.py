@@ -3441,8 +3441,6 @@ class P4Sync(Command, P4UserMap):
                             if f["action"] in [ "integrate", "branch" ]:
                                 filelog = p4_filelog_entry(f["path"], change)[0]
 
-                                assert(len(filelog) == 16)
-
                                 assert(filelog['code'] == 'stat')
                                 assert(filelog['depotFile'] == f["path"])
 
@@ -3462,7 +3460,17 @@ class P4Sync(Command, P4UserMap):
                                 assert(filelog['how0,0'])
                                 assert(filelog['srev0,0'])
 
+                                assert(len(filelog) >= 16)
+
                                 mergeSourceDepotPaths += [ filelog['file0,0'] ]
+
+                                if(len(filelog) > 16):
+                                    # rare situation that one file has more than one merge sources
+                                    # cannot be mapped correctly to git, but this is doing the most reasonable approximation
+                                    addCount = (len(filelog) - 16) / 4
+                                    assert(len(filelog) == 16 + 4*addCount)
+                                    for i in range(1,addCount):
+                                        mergeSourceDepotPaths += [ filelog['file0,%i'%i] ]
 
                         mergeSourceBranches = set()
                         if self.useClientSpec:
