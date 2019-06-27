@@ -2167,7 +2167,7 @@ class P4Submit(Command, P4UserMap):
             for b in body:
                 labelTemplate += "\t" + b + "\n"
             labelTemplate += "View:\n"
-            for depot_side in clientSpec.mappings:
+            for depot_side in clientSpec.depotPaths:
                 labelTemplate += "\t%s\n" % depot_side
 
             if self.dry_run:
@@ -2180,7 +2180,7 @@ class P4Submit(Command, P4UserMap):
 
                 # Use the label
                 p4_system(["tag", "-l", name] +
-                          ["%s@%s" % (depot_side, changelist) for depot_side in clientSpec.mappings])
+                          ["%s@%s" % (depot_side, changelist) for depot_side in clientSpec.depotPaths])
 
                 if verbose:
                     print("created p4 label for tag %s" % name)
@@ -2449,14 +2449,14 @@ class View(object):
        repo according to the view."""
 
     def __init__(self, client_name):
-        self.mappings = []
+        self.depotPaths = []
         self.client_prefix = "//%s/" % client_name
         # cache results of "p4 where" to lookup client file locations
         self.client_spec_path_cache = {}
 
     def append(self, view_line):
         """Parse a view line, splitting it into depot and client
-           sides.  Append to self.mappings, preserving order.  This
+           sides.  Append to self.depotPaths, preserving order.  This
            is only needed for tag creation."""
 
         # Split the view line into exactly two words.  P4 enforces
@@ -2489,14 +2489,14 @@ class View(object):
         if depotPath.startswith("+"):
             depotPath = depotPath[1:]
 
-        # prefix - means exclude this path, leave out of mappings
+        # prefix - means exclude this path, leave out of depotPaths
         exclude = False
         if depotPath.startswith("-"):
             exclude = True
             depotPath = depotPath[1:]
 
         if not exclude:
-            self.mappings.append(depotPath)
+            self.depotPaths.append(depotPath)
 
     def convert_client_path(self, clientFile):
         # chop off //client/ part to make it relative
