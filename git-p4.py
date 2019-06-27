@@ -2475,28 +2475,28 @@ class View(object):
             close_quote_index = view_line.find('"', 1)
             if close_quote_index <= 0:
                 die("No first-word closing quote found: %s" % view_line)
-            depot_side = view_line[1:close_quote_index]
+            depotPath = view_line[1:close_quote_index]
             # skip closing quote and space
             rhs_index = close_quote_index + 1 + 1
         else:
             space_index = view_line.find(" ")
             if space_index <= 0:
                 die("No word-splitting space found: %s" % view_line)
-            depot_side = view_line[0:space_index]
+            depotPath = view_line[:space_index]
             rhs_index = space_index + 1
 
         # prefix + means overlay on previous mapping
-        if depot_side.startswith("+"):
-            depot_side = depot_side[1:]
+        if depotPath.startswith("+"):
+            depotPath = depotPath[1:]
 
         # prefix - means exclude this path, leave out of mappings
         exclude = False
-        if depot_side.startswith("-"):
+        if depotPath.startswith("-"):
             exclude = True
-            depot_side = depot_side[1:]
+            depotPath = depotPath[1:]
 
         if not exclude:
-            self.mappings.append(depot_side)
+            self.mappings.append(depotPath)
 
     def convert_client_path(self, clientFile):
         # chop off //client/ part to make it relative
