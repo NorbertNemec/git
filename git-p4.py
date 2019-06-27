@@ -2450,6 +2450,8 @@ class View(object):
 
     def __init__(self, client_name):
         self.depotPaths = []
+        self.depotPathPrefix_from_branchName = {}
+        self.branchName_from_depotPathPrefix = {}
         self.client_prefix = "//%s/" % client_name
         # cache results of "p4 where" to lookup client file locations
         self.client_spec_path_cache = {}
@@ -2497,6 +2499,19 @@ class View(object):
 
         if not exclude:
             self.depotPaths.append(depotPath)
+            clientPath = view_line[rhs_index:].strip().strip('"')
+
+            if gitConfigBool("core.ignorecase"):
+                depotPath = depotPath.lower()
+                clientPath = clientPath.lower()
+
+            assert depotPath.endswith("...")
+            depotPathPrefix = depotPath[:-3]
+            assert clientPath.startswith(self.client_prefix)
+            assert clientPath.endswith("/...") 
+            branchName = clientPath[len(self.client_prefix):-4]
+            self.depotPathPrefix_from_branchName[branchName] = depotPathPrefix
+            self.branchName_from_depotPathPrefix[depotPathPrefix] = branchName
 
     def convert_client_path(self, clientFile):
         # chop off //client/ part to make it relative
