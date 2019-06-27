@@ -2505,16 +2505,16 @@ class View(object):
                 (self.client_prefix, clientFile))
         return clientFile[len(self.client_prefix):]
 
-    def update_client_spec_path_cache(self, files):
+    def update_client_spec_path_cache(self, depotFiles):
         """ Caching file paths by "p4 where" batch query """
 
         # List depot file paths exclude that already cached
-        fileArgs = [f['path'] for f in files if f['path'] not in self.client_spec_path_cache]
+        missingDepotFilePaths = [f['path'] for f in depotFiles if f['path'] not in self.client_spec_path_cache]
 
-        if len(fileArgs) == 0:
+        if len(missingDepotFilePaths) == 0:
             return  # All files in cache
 
-        where_result = p4CmdList(["-x", "-", "where"], stdin=fileArgs)
+        where_result = p4CmdList(["-x", "-", "where"], stdin=missingDepotFilePaths)
         for res in where_result:
             if "code" in res and res["code"] == "error":
                 # assume error is "... file(s) not in client view"
@@ -2529,7 +2529,7 @@ class View(object):
             self.client_spec_path_cache[res['depotFile']] = self.convert_client_path(res["clientFile"])
 
         # not found files or unmap files set to ""
-        for depotFile in fileArgs:
+        for depotFile in missingDepotFilePaths:
             if gitConfigBool("core.ignorecase"):
                 depotFile = depotFile.lower()
             if depotFile not in self.client_spec_path_cache:
