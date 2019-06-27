@@ -2453,8 +2453,6 @@ class View(object):
         self.depotPathPrefix_from_branchName = {}
         self.branchName_from_depotPathPrefix = {}
         self.client_prefix = "//%s/" % client_name
-        # cache results of "p4 where" to lookup client file locations
-        self.client_spec_path_cache = {}
 
     def append(self, view_line):
         """Parse a view line, splitting it into depot and client
@@ -2513,42 +2511,8 @@ class View(object):
             self.depotPathPrefix_from_branchName[branchName] = depotPathPrefix
             self.branchName_from_depotPathPrefix[depotPathPrefix] = branchName
 
-    def convert_client_path(self, clientFile):
-        # chop off //client/ part to make it relative
-        if not clientFile.startswith(self.client_prefix):
-            die("No prefix '%s' on clientFile '%s'" %
-                (self.client_prefix, clientFile))
-        return clientFile[len(self.client_prefix):]
-
     def update_client_spec_path_cache(self, depotFiles):
-        """ Caching file paths by "p4 where" batch query """
-
-        # List depot file paths exclude that already cached
-        missingDepotFilePaths = [f['path'] for f in depotFiles if f['path'] not in self.client_spec_path_cache]
-
-        if len(missingDepotFilePaths) == 0:
-            return  # All files in cache
-
-        where_result = p4CmdList(["-x", "-", "where"], stdin=missingDepotFilePaths)
-        for res in where_result:
-            if "code" in res and res["code"] == "error":
-                # assume error is "... file(s) not in client view"
-                continue
-            if "clientFile" not in res:
-                die("No clientFile in 'p4 where' output")
-            if "unmap" in res:
-                # it will list all of them, but only one not unmap-ped
-                continue
-            if gitConfigBool("core.ignorecase"):
-                res['depotFile'] = res['depotFile'].lower()
-            self.client_spec_path_cache[res['depotFile']] = self.convert_client_path(res["clientFile"])
-
-        # not found files or unmap files set to ""
-        for depotFile in missingDepotFilePaths:
-            if gitConfigBool("core.ignorecase"):
-                depotFile = depotFile.lower()
-            if depotFile not in self.client_spec_path_cache:
-                self.client_spec_path_cache[depotFile] = ""
+        pass
 
     def map_in_client(self, depot_path):
         """Return the relative location in the client where this
@@ -2558,10 +2522,10 @@ class View(object):
         if gitConfigBool("core.ignorecase"):
             depot_path = depot_path.lower()
 
-        if depot_path in self.client_spec_path_cache:
-            return self.client_spec_path_cache[depot_path]
+        for depotPathPrefix in self.branchName_from_depotPathPrefix:
+            if depot_path.startswith(depotPathPrefix):
+                return self.branchName_from_depotPathPrefix[depotPathPrefix] + "/" + depot_path[len(depotPathPrefix):]
 
-        die( "Error: %s is not found in client spec path" % depot_path )
         return ""
 
 class P4Sync(Command, P4UserMap):
