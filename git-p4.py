@@ -2902,7 +2902,16 @@ class P4Sync(Command, P4UserMap):
 
         if 'depotFile' in marshalled and self.stream_have_file_info:
             # start of a new file - output the old one first
-            self.streamOneP4File(self.stream_file, self.stream_contents)
+            try:
+                self.streamOneP4File(self.stream_file, self.stream_contents)
+            except:
+                # force a failure in fast-import, else an empty
+                # commit will be made
+                self.gitStream.write("\n")
+                self.gitStream.write("die-now\n")
+                self.gitStream.close()
+                raise
+
             self.stream_file = {}
             self.stream_contents = []
             self.stream_have_file_info = False
@@ -3616,7 +3625,7 @@ class P4Sync(Command, P4UserMap):
             print(self.gitError.read())
 
     def openStreams(self):
-        self.importProcess = subprocess.Popen(["git", "fast-import"],
+        self.importProcess = subprocess.Popen(["git", "fast-import", "--done"],
                                               stdin=subprocess.PIPE,
                                               stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE);
@@ -3625,6 +3634,7 @@ class P4Sync(Command, P4UserMap):
         self.gitError = self.importProcess.stderr
 
     def closeStreams(self):
+        self.gitStream.write("done\n")
         self.gitStream.close()
         if self.importProcess.wait() != 0:
             die("fast-import failed: %s" % self.gitError.read())
