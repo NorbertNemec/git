@@ -2517,9 +2517,6 @@ class View(object):
                 depotPathPrefix = depotPathPrefix.lower()
             self.branchName_from_depotPathPrefix[depotPathPrefix] = branchName
 
-    def update_client_spec_path_cache(self, depotFiles):
-        pass
-
     def map_in_client(self, depot_path):
         """Return the relative location in the client where this
            depot file should live.  Returns "" if the file should
@@ -2651,7 +2648,6 @@ class P4Sync(Command, P4UserMap):
             fnum = fnum + 1
 
         if self.useClientSpec:
-            self.clientSpecDirs.update_client_spec_path_cache(files)
             files = [f for f in files if self.clientSpecDirs.map_in_client(f['path'])]
 
         return files
@@ -3039,9 +3035,6 @@ class P4Sync(Command, P4UserMap):
 
         if self.verbose:
             print('commit into {0}'.format(branch))
-
-        if self.clientSpecDirs:
-            self.clientSpecDirs.update_client_spec_path_cache(files)
 
         files = [f for f in files
             if self.hasBranchPrefix(self.inClientSpec(f['path']))]
@@ -3473,7 +3466,6 @@ class P4Sync(Command, P4UserMap):
 
                         mergeSourceBranches = set()
                         if self.useClientSpec:
-                            self.clientSpecDirs.update_client_spec_path_cache([ { "path": p } for p in mergeSourceDepotPaths ])
                             mergeSourceBranches = set(self.clientSpecDirs.map_in_client(p).split('/')[0] for p in mergeSourceDepotPaths)
                         else:
                             mergeSourceBranches = set(self.stripRepotPath(p, self.depotPaths).split('/')[0] for p in mergeSourceDepotPaths)
