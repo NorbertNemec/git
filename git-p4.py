@@ -2506,16 +2506,15 @@ class View(object):
             self.depotPaths.append(depotPath)
             clientPath = view_line[rhs_index:].strip().strip('"')
 
-            if gitConfigBool("core.ignorecase"):
-                depotPath = depotPath.lower()
-                clientPath = clientPath.lower()
-
             assert depotPath.endswith("...")
             depotPathPrefix = depotPath[:-3]
             assert clientPath.startswith(self.client_prefix)
             assert clientPath.endswith("/...") 
             branchName = clientPath[len(self.client_prefix):-4]
             self.depotPathPrefix_from_branchName[branchName] = depotPathPrefix
+
+            if gitConfigBool("core.ignorecase"):
+                depotPathPrefix = depotPathPrefix.lower()
             self.branchName_from_depotPathPrefix[depotPathPrefix] = branchName
 
     def update_client_spec_path_cache(self, depotFiles):
@@ -2526,11 +2525,12 @@ class View(object):
            depot file should live.  Returns "" if the file should
            not be mapped in the client."""
 
+        normalized_depot_path = depot_path
         if gitConfigBool("core.ignorecase"):
-            depot_path = depot_path.lower()
+            normalized_depot_path = depot_path.lower()
 
-        for depotPathPrefix in self.branchName_from_depotPathPrefix:
-            if depot_path.startswith(depotPathPrefix):
+        for depotPathPrefix in self.branchName_from_depotPathPrefix.keys():
+            if normalized_depot_path.startswith(depotPathPrefix):
                 return self.branchName_from_depotPathPrefix[depotPathPrefix] + "/" + depot_path[len(depotPathPrefix):]
 
         return ""
