@@ -2517,20 +2517,28 @@ class View(object):
                 depotPathPrefix = depotPathPrefix.lower()
             self.branchName_from_depotPathPrefix[depotPathPrefix] = branchName
 
-    def map_in_client(self, depot_path):
-        """Return the relative location in the client where this
-           depot file should live.  Returns "" if the file should
-           not be mapped in the client."""
-
+    def branchName_from_depotPath(self, depot_path):
         normalized_depot_path = depot_path
         if gitConfigBool("core.ignorecase"):
             normalized_depot_path = depot_path.lower()
 
         for depotPathPrefix in self.branchName_from_depotPathPrefix.keys():
             if normalized_depot_path.startswith(depotPathPrefix):
-                return self.branchName_from_depotPathPrefix[depotPathPrefix] + "/" + depot_path[len(depotPathPrefix):]
+                return self.branchName_from_depotPathPrefix[depotPathPrefix]
 
         return ""
+
+    def map_in_client(self, depot_path):
+        """Return the relative location in the client where this
+           depot file should live.  Returns "" if the file should
+           not be mapped in the client."""
+
+        branchName = self.branchName_from_depotPath(depot_path)
+        if branchName == "":
+            return ""
+
+        depotPathPrefix = self.depotPathPrefix_from_branchName[branchName]
+        return branchName + "/" + depot_path[len(depotPathPrefix):]
 
 class P4Sync(Command, P4UserMap):
 
@@ -3467,7 +3475,7 @@ class P4Sync(Command, P4UserMap):
                         mergeSourceBranches = set()
                         for p in mergeSourceDepotPaths:
                             if self.useClientSpec:
-                                branch = self.clientSpecDirs.map_in_client(p).split('/')[0]
+                                branch = self.clientSpecDirs.branchName_from_depotPath(p)
                             else:
                                 branch = self.stripRepotPath(p, self.depotPaths).split('/')[0]
                             mergeSourceBranches.add(branch)
