@@ -3378,7 +3378,7 @@ class P4Sync(Command, P4UserMap):
         cnt = 1
         for change in changes:
             if not self.silent:
-                sys.stdout.write("\rImporting revision %s (%s%%)" % (change, cnt * 100 / len(changes)))
+                sys.stdout.write("\rImporting revision %s (%i / %i)" % (change, cnt, len(changes)))
                 if self.verbose:
                     sys.stdout.write("\n")
                 sys.stdout.flush()
@@ -3854,8 +3854,13 @@ class P4Sync(Command, P4UserMap):
                 
                 changes = p4ChangesForPaths(selectPaths, self.changeRange, self.changes_block_size)
 
-                if len(self.maxChanges) > 0:
-                    changes = changes[:min(int(self.maxChanges), len(changes))]
+                if not self.silent:
+                    print("Found {} changes to import.".format(len(changes)))
+
+                if len(self.maxChanges) > 0 and int(self.maxChanges) < len(changes):
+                    if not self.silent:
+                        print("Truncating to --max-changes {}.".format(self.maxChanges))
+                    changes = changes[:int(self.maxChanges)]
 
             if len(changes) == 0:
                 if not self.silent:
