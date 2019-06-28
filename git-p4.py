@@ -3465,10 +3465,12 @@ class P4Sync(Command, P4UserMap):
                                         mergeSourceDepotPaths += [ filelog['file0,%i'%i] ]
 
                         mergeSourceBranches = set()
-                        if self.useClientSpec:
-                            mergeSourceBranches = set(self.clientSpecDirs.map_in_client(p).split('/')[0] for p in mergeSourceDepotPaths)
-                        else:
-                            mergeSourceBranches = set(self.stripRepotPath(p, self.depotPaths).split('/')[0] for p in mergeSourceDepotPaths)
+                        for p in mergeSourceDepotPaths:
+                            if self.useClientSpec:
+                                branch = self.clientSpecDirs.map_in_client(p).split('/')[0]
+                            else:
+                                branch = self.stripRepotPath(p, self.depotPaths).split('/')[0]
+                            mergeSourceBranches.add(branch)
                         mergeSourceBranches.discard("")
                         mergeSourceBranches.discard(branch)
 
