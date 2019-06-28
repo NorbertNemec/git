@@ -389,7 +389,7 @@ def p4_last_change():
     results = p4CmdList(["changes", "-m", "1"], skip_info=True)
     return int(results[0]['change'])
 
-def p4_filelog_entry(depotPath, change):
+def p4_filelog_entries(depotPath, change):
     cmd = ["filelog", "-s", "-m", "1"]
     cmd += [ depotPath+"@"+str(change) ]
     results = p4CmdList(cmd, skip_info=True)
@@ -3422,8 +3422,10 @@ class P4Sync(Command, P4UserMap):
                         ## HACK  --hwn
                         if self.clientSpecDirs:
                             branchPrefix = self.clientSpecDirs.client_prefix + branch + "/"
+                            filelogPattern = self.clientSpecDirs.depotPathPrefix_from_branchName[branch] + "..."
                         else:
                             branchPrefix = self.depotPaths[0] + branch + "/"
+                            filelogPattern = branchPrefix + "..."
                         self.branchPrefixes = [ branchPrefix ]
 
                         parent = ""
@@ -3434,14 +3436,14 @@ class P4Sync(Command, P4UserMap):
                             print("branch is %s" % branch)
 
                         mergeSourceDepotPaths = []
-                        for f in filesForCommit:
-                            if f["action"] in [ "integrate", "branch" ]:
-                                filelog = p4_filelog_entry(f["path"], change)[0]
 
+                        filelog_entries = p4_filelog_entries(filelogPattern, change)
+                        for filelog in filelog_entries:
+                            if filelog['action0'] in [ "integrate", "branch" ]:
                                 assert(filelog['code'] == 'stat')
-                                assert(filelog['depotFile'] == f["path"])
+                                assert(filelog['depotFile'])
 
-                                assert(filelog['action0'] == f["action"])
+                                assert(filelog['action0'])
                                 assert(filelog['change0'] == str(change))
                                 assert(filelog['client0'])
                                 assert(filelog['desc0'])
