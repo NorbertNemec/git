@@ -3375,16 +3375,18 @@ class P4Sync(Command, P4UserMap):
         return None
 
     def importChanges(self, changes, origin_revision=0):
-        cnt = 1
+        cnt = 0
+        starttime_total = time.time()        
         for change in changes:
+            cnt = cnt + 1
+
             if not self.silent:
                 sys.stdout.write("\rImporting revision %s (%i / %i)" % (change, cnt, len(changes)))
                 if self.verbose:
                     sys.stdout.write("\n")
                 sys.stdout.flush()
-            cnt = cnt + 1
 
-            starttime = time.time()
+            starttime_change = time.time()
 
             description = p4_describe(change)
 
@@ -3531,8 +3533,13 @@ class P4Sync(Command, P4UserMap):
             if not self.silent:
                 if self.verbose:
                     sys.stdout.write("\r")
-                finishtime = time.time()
-                sys.stdout.write("... finished revision %s (%f seconds)\n" % (change, finishtime - starttime))
+                nowtime = time.time()
+                time_change = nowtime - starttime_change
+                time_sum = nowtime - starttime_total
+                time_avg = time_sum / cnt
+                time_est = time_avg * len(changes)
+                time_remain = time_est - time_sum
+                sys.stdout.write("... finished revision %s (%fs / avg %fs / sum %fh / est %fh / rem %fh)\n" % (change, time_change, time_avg, time_sum / 3600, time_est / 3600, time_remain / 3600))
 
     def sync_origin_only(self):
         if self.syncWithOrigin:
