@@ -976,7 +976,7 @@ def chooseBlockSize(blockSize):
     else:
         return defaultBlockSize
 
-def p4ChangesForPaths(selectPaths, changeRange, requestedBlockSize):
+def p4ChangesForPaths(selectPaths, changeRange, requestedBlockSize, maxChanges=0):
     assert selectPaths
 
     # Parse the change range into start and end. Try to find integer
@@ -1042,6 +1042,9 @@ def p4ChangesForPaths(selectPaths, changeRange, requestedBlockSize):
                 continue
             changes.add(int(entry['change']))
 
+        if maxChanges > 0 and maxChanges < len(changes):
+            break
+
         if not block_size:
             break
 
@@ -1051,6 +1054,10 @@ def p4ChangesForPaths(selectPaths, changeRange, requestedBlockSize):
         changeStart = end + 1
 
     changes = sorted(changes)
+
+    if maxChanges > 0 and maxChanges < len(changes):
+        changes = changes[:maxChanges]
+
     return changes
 
 def p4PathStartsWith(path, prefix):
@@ -2542,7 +2549,7 @@ class P4Sync(Command, P4UserMap):
                 optparse.make_option("--import-labels", dest="importLabels", action="store_true"),
                 optparse.make_option("--import-local", dest="importIntoRemotes", action="store_false",
                                      help="Import into refs/heads/ , not refs/remotes"),
-                optparse.make_option("--max-changes", dest="maxChanges",
+                optparse.make_option("--max-changes", dest="maxChanges", type="int",
                                      help="Maximum number of changes to import"),
                 optparse.make_option("--changes-block-size", dest="changes_block_size", type="int",
                                      help="Internal block size to use when iteratively calling p4 changes"),
@@ -2573,7 +2580,7 @@ class P4Sync(Command, P4UserMap):
         self.changesFile = ""
         self.syncWithOrigin = True
         self.importIntoRemotes = True
-        self.maxChanges = ""
+        self.maxChanges = 0
         self.changes_block_size = None
         self.keepRepoPath = False
         self.depotPaths = None
@@ -3859,15 +3866,10 @@ class P4Sync(Command, P4UserMap):
                 else:
                     selectPaths = self.depotPaths
                 
-                changes = p4ChangesForPaths(selectPaths, self.changeRange, self.changes_block_size)
+                changes = p4ChangesForPaths(selectPaths, self.changeRange, self.changes_block_size, self.maxChanges)
 
                 if not self.silent:
                     print("Found {} changes to import.".format(len(changes)))
-
-                if len(self.maxChanges) > 0 and int(self.maxChanges) < len(changes):
-                    if not self.silent:
-                        print("Truncating to --max-changes {}.".format(self.maxChanges))
-                    changes = changes[:int(self.maxChanges)]
 
             if len(changes) == 0:
                 if not self.silent:
