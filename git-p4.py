@@ -3475,10 +3475,10 @@ class P4Sync(Command, P4UserMap):
                         mergeSourceBranches = set()
                         for p in mergeSourceDepotPaths:
                             if self.useClientSpec:
-                                branch = self.clientSpecDirs.branchName_from_depotPath(p)
+                                b = self.clientSpecDirs.branchName_from_depotPath(p)
                             else:
-                                branch = self.stripRepotPath(p, self.depotPaths).split('/')[0]
-                            mergeSourceBranches.add(branch)
+                                b = self.stripRepotPath(p, self.depotPaths).split('/')[0]
+                            mergeSourceBranches.add(b)
                         mergeSourceBranches.discard("")
                         mergeSourceBranches.discard(branch)
 
