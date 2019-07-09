@@ -3467,7 +3467,7 @@ class P4Sync(Command, P4UserMap):
                     if self.useClientSpec:
                         b = self.clientSpecDirs.branchName_from_depotPath(sourceDepotPath)
                     else:
-                        b = self.stripRepotPath(sourceDepotPath, self.depotPaths).split('/')[0]
+                        b = self.stripDepotPath(sourceDepotPath, self.depotPaths).split('/')[0]
 
                     if sourceBranch == None:
                         assert b != branch
