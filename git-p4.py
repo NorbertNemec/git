@@ -3538,8 +3538,7 @@ class P4Sync(Command, P4UserMap):
                     # only needed once, to connect to the previous commit
                     self.initialParent = ""
             except IOError:
-                print(self.gitError.read())
-                sys.exit(1)
+                die("IOError (git output: " + self.gitError.read() + ")")
 
             if not self.silent:
                 if self.verbose:
@@ -3619,7 +3618,7 @@ class P4Sync(Command, P4UserMap):
             self.commit(details, self.extractFilesFromCommit(details), self.branch)
         except IOError:
             print("IO error with git fast-import. Is your git version recent enough?")
-            print(self.gitError.read())
+            die("fast-import failed: %s" % self.gitError.read())
 
     def openStreams(self):
         self.importProcess = subprocess.Popen(["git", "fast-import", "--done"],
