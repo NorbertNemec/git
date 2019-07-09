@@ -2635,11 +2635,11 @@ class P4Sync(Command, P4UserMap):
             if self.verbose:
                 print("checkpoint finished: " + out)
 
-    def extractFilesFromCommit(self, commit, shelved=False, shelved_cl = 0):
+    def extractFilesFromDescription(self, description, shelved=False, shelved_cl = 0):
         files = []
         fnum = 0
-        while "depotFile%s" % fnum in commit:
-            path =  commit["depotFile%s" % fnum]
+        while "depotFile%s" % fnum in description:
+            path =  description["depotFile%s" % fnum]
 
             if not self.useClientSpec:
                 if [p for p in self.cloneExclude
@@ -2654,9 +2654,9 @@ class P4Sync(Command, P4UserMap):
 
             file = {}
             file["path"] = path
-            file["rev"] = commit["rev%s" % fnum]
-            file["action"] = commit["action%s" % fnum]
-            file["type"] = commit["type%s" % fnum]
+            file["rev"] = description["rev%s" % fnum]
+            file["action"] = description["action%s" % fnum]
+            file["type"] = description["type%s" % fnum]
             if shelved:
                 file["shelved_cl"] = int(shelved_cl)
             files.append(file)
@@ -2708,11 +2708,11 @@ class P4Sync(Command, P4UserMap):
         path = wildcard_decode(path)
         return path
 
-    def splitFilesIntoBranches(self, commit):
+    def splitDescriptionIntoBranches(self, description):
         """Look at each depotFile in the commit to figure out to what
            branch it belongs."""
 
-        files = self.extractFilesFromCommit(commit)
+        files = self.extractFilesFromDescription(description)
 
         branches = {}
         for file in files:
@@ -3428,7 +3428,7 @@ class P4Sync(Command, P4UserMap):
 
             try:
                 if self.detectBranches:
-                    filesPerBranch = self.splitFilesIntoBranches(description)
+                    filesPerBranch = self.splitDescriptionIntoBranches(description)
 
                     assert(len(filesPerBranch) == 1) # single commit spanning multiple branch not yet tested -- need example first
 
@@ -3543,7 +3543,7 @@ class P4Sync(Command, P4UserMap):
                             self.commit(description, filesForCommit, branch, "", merges)
                             self.checkpoint()
                 else:
-                    files = self.extractFilesFromCommit(description)
+                    files = self.extractFilesFromDescription(description)
                     self.commit(description, files, self.branch,
                                 self.initialParent)
                     # only needed once, to connect to the previous commit
@@ -3626,7 +3626,7 @@ class P4Sync(Command, P4UserMap):
 
         self.updateOptionDict(details)
         try:
-            self.commit(details, self.extractFilesFromCommit(details), self.branch)
+            self.commit(details, self.extractFilesFromDescription(details), self.branch)
         except IOError:
             print("IO error with git fast-import. Is your git version recent enough?")
             die("fast-import failed: %s" % self.gitError.read())
@@ -4127,7 +4127,7 @@ class P4Unshelve(Command):
         """
         parent_description = p4_describe(change, shelved=True)
         parent_description['desc'] = 'parent for shelved changelist {}\n'.format(change)
-        files = sync.extractFilesFromCommit(parent_description, shelved=False, shelved_cl=change)
+        files = sync.extractFilesFromDescription(parent_description, shelved=False, shelved_cl=change)
 
         parent_files = []
         for f in files:
@@ -4183,7 +4183,7 @@ class P4Unshelve(Command):
 
         # create the commit for the shelved changelist itself
         description = p4_describe(change, True)
-        files = sync.extractFilesFromCommit(description, True, change)
+        files = sync.extractFilesFromDescription(description, True, change)
 
         sync.commit(description, files, branch_name, "")
         sync.closeStreams()
