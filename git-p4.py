@@ -2564,6 +2564,8 @@ class P4Sync(Command, P4UserMap):
                                      help="Only sync files that are included in the Perforce Client Spec"),
                 optparse.make_option("--dry-run", dest="dryRyn", action='store_true',
                                      help="Only read from perforce, do not write to git"),
+                optparse.make_option("--skip-file-content", dest="skipFileContent", action='store_true',
+                                     help="Only handle commit&branching meta info, do not read/write files"),
                 optparse.make_option("-/", dest="cloneExclude",
                                      action="append", type="string",
                                      help="exclude depot path"),
@@ -2596,6 +2598,7 @@ class P4Sync(Command, P4UserMap):
         self.useClientSpec = False
         self.useClientSpec_from_options = False
         self.dryRun = False
+        self.skipFileContent = False
         self.clientSpecDirs = None
         self.tempBranches = []
         self.tempBranchLocation = "refs/git-p4-tmp"
@@ -2935,6 +2938,9 @@ class P4Sync(Command, P4UserMap):
 
     # Stream directly from "p4 files" into "git fast-import"
     def streamP4Files(self, files):
+        if self.skipFileContent:
+            return
+
         filesForCommit = []
         filesToRead = []
         filesToDelete = []
