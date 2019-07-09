@@ -3409,7 +3409,7 @@ class P4Sync(Command, P4UserMap):
         if not isMergePoint:
             return set()
 
-        print("determineMergeSourceBranches for ", change, branch)
+        print("\ndetermineMergeSourceBranches for change {} on branch {}".format(change, branch))
 #        print("filesForCommit:")
 #        pp.pprint(filesForCommit)
 
@@ -3474,6 +3474,8 @@ class P4Sync(Command, P4UserMap):
                         sourceBranch = b
 
                     assert sourceBranch == b # merging from multiple branches at once not yet tested
+
+        print("... resulting source branch: " + sourceBranch + "\n")
 
         mergeSourceBranches = set()
         if sourceBranch != "":
