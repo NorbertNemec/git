@@ -2562,6 +2562,8 @@ class P4Sync(Command, P4UserMap):
                                      help="Keep entire BRANCH/DIR/SUBDIR prefix during import"),
                 optparse.make_option("--use-client-spec", dest="useClientSpec", action='store_true',
                                      help="Only sync files that are included in the Perforce Client Spec"),
+                optparse.make_option("--dry-run", dest="dryRyn", action='store_true',
+                                     help="Only read from perforce, do not write to git"),
                 optparse.make_option("-/", dest="cloneExclude",
                                      action="append", type="string",
                                      help="exclude depot path"),
@@ -2593,6 +2595,7 @@ class P4Sync(Command, P4UserMap):
         self.cloneExclude = []
         self.useClientSpec = False
         self.useClientSpec_from_options = False
+        self.dryRun = False
         self.clientSpecDirs = None
         self.tempBranches = []
         self.tempBranchLocation = "refs/git-p4-tmp"
@@ -2624,9 +2627,10 @@ class P4Sync(Command, P4UserMap):
     def checkpoint(self):
         self.gitStream.write("checkpoint\n\n")
         self.gitStream.write("progress checkpoint\n\n")
-        out = self.gitOutput.readline()
-        if self.verbose:
-            print("checkpoint finished: " + out)
+        if not self.dryRun:
+            out = self.gitOutput.readline()
+            if self.verbose:
+                print("checkpoint finished: " + out)
 
     def extractFilesFromCommit(self, commit, shelved=False, shelved_cl = 0):
         files = []
@@ -3621,10 +3625,18 @@ class P4Sync(Command, P4UserMap):
             die("fast-import failed: %s" % self.gitError.read())
 
     def openStreams(self):
-        self.importProcess = subprocess.Popen(["git", "fast-import", "--done"],
-                                              stdin=subprocess.PIPE,
-                                              stdout=subprocess.PIPE,
-                                              stderr=subprocess.PIPE);
+        if self.dryRun:
+            self.importProcess = subprocess.Popen(["cat"],
+                                                stdin=subprocess.DEVNULL,
+                                                stdout=subprocess.DEVNULL,
+                                                stderr=subprocess.DEVNULL,
+                                                )
+        else:
+            self.importProcess = subprocess.Popen(["git", "fast-import", "--done"],
+                                                stdin=subprocess.PIPE,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
+
         self.gitOutput = self.importProcess.stdout
         self.gitStream = self.importProcess.stdin
         self.gitError = self.importProcess.stderr
