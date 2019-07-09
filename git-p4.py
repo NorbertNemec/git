@@ -2657,6 +2657,9 @@ class P4Sync(Command, P4UserMap):
             file["rev"] = description["rev%s" % fnum]
             file["action"] = description["action%s" % fnum]
             file["type"] = description["type%s" % fnum]
+            if file["action"] != 'delete':
+                file["digest"] = description["digest%s" % fnum]
+                file["fileSize"] = description["fileSize%s" % fnum]
             if shelved:
                 file["shelved_cl"] = int(shelved_cl)
             files.append(file)
