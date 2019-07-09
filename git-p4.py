@@ -26,6 +26,9 @@ import zipfile
 import zlib
 import ctypes
 import errno
+import pprint
+
+pp = pprint.PrettyPrinter()
 
 # support basestring in python3
 try:
@@ -3406,6 +3409,10 @@ class P4Sync(Command, P4UserMap):
         if not isMergePoint:
             return set()
 
+        print("determineMergeSourceBranches for ", change, branch)
+#        print("filesForCommit:")
+#        pp.pprint(filesForCommit)
+
         mergeSourceDepotPaths = []
 
         if self.clientSpecDirs:
@@ -3414,6 +3421,18 @@ class P4Sync(Command, P4UserMap):
             filelogPattern = self.depotPaths[0] + branch + "/..."
 
         filelog_entries = p4_filelog_entries(filelogPattern, change)
+
+        desc_files = sorted([ (f['path'],f['action'],f['digest'],f['fileSize'],f['rev'],f['type']) for f in filesForCommit ])
+        flog_files = sorted([ (f['depotFile'],f['action0'],f['digest0'],f['fileSize0'],f['rev0'],f['type0']) for f in filelog_entries ])
+
+        assert desc_files == flog_files
+
+#        print("filelog_entries:")
+#        pp.pprint(filelog_entries)
+
+        sourceBranch = None
+        sourceChange = change
+
         for filelog in filelog_entries:
             if filelog['action0'] in [ "integrate", "branch" ]:
                 assert(filelog['code'] == 'stat')
@@ -3430,32 +3449,35 @@ class P4Sync(Command, P4UserMap):
                 assert(filelog['type0'])
                 assert(filelog['user0'])
 
-                assert(filelog['erev0,0'])
-                assert(filelog['file0,0'])
-                assert(filelog['how0,0'])
-                assert(filelog['srev0,0'])
+                numRanges = (len(filelog) - 12) / 4
+                assert(len(filelog) == 12 + 4*numRanges)
+                assert(numRanges > 0)
 
-                assert(len(filelog) >= 16)
+                assert(numRanges == 1) # merges from multiple ranges not yet tested
 
-                mergeSourceDepotPaths += [ filelog['file0,0'] ]
+                for r in range(numRanges):
+                    assert(filelog['file0,%i'%r]) # depotPath of the source
+                    assert(filelog['srev0,%i'%r]) # start revision of the source range
+                    assert(filelog['erev0,%i'%r]) # end revision of the source range
+                    assert(filelog['how0,%i'%r])
 
-                if(len(filelog) > 16):
-                    # rare situation that one file has more than one merge sources
-                    # cannot be mapped correctly to git, but this is doing the most reasonable approximation
-                    addCount = (len(filelog) - 16) / 4
-                    assert(len(filelog) == 16 + 4*addCount)
-                    for i in range(1,addCount):
-                        mergeSourceDepotPaths += [ filelog['file0,%i'%i] ]
+                    sourceDepotPath = filelog['file0,%i'%r]
+                    sourceRev = filelog['erev0,%i'%r]
+
+                    if self.useClientSpec:
+                        b = self.clientSpecDirs.branchName_from_depotPath(sourceDepotPath)
+                    else:
+                        b = self.stripRepotPath(sourceDepotPath, self.depotPaths).split('/')[0]
+
+                    if sourceBranch == None:
+                        assert b != branch
+                        sourceBranch = b
+
+                    assert sourceBranch == b # merging from multiple branches at once not yet tested
 
         mergeSourceBranches = set()
-        for p in mergeSourceDepotPaths:
-            if self.useClientSpec:
-                b = self.clientSpecDirs.branchName_from_depotPath(p)
-            else:
-                b = self.stripRepotPath(p, self.depotPaths).split('/')[0]
-            mergeSourceBranches.add(b)
-        mergeSourceBranches.discard("")
-        mergeSourceBranches.discard(branch)
+        if sourceBranch != "":
+            mergeSourceBranches.add(sourceBranch)
 
         return mergeSourceBranches
 
