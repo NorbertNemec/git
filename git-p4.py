@@ -3428,8 +3428,14 @@ class P4Sync(Command, P4UserMap):
 
             try:
                 if self.detectBranches:
-                    branches = self.splitFilesIntoBranches(description)
-                    for branch in branches.keys():
+                    filesPerBranch = self.splitFilesIntoBranches(description)
+
+                    assert(len(filesPerBranch) == 1) # single commit spanning multiple branch not yet tested -- need example first
+
+                    for branch,filesForCommit in filesPerBranch.items():
+                        if self.verbose:
+                            print("branch is %s" % branch)
+
                         ## HACK  --hwn
                         if self.clientSpecDirs:
                             branchPrefix = self.clientSpecDirs.client_prefix + branch + "/"
@@ -3440,11 +3446,6 @@ class P4Sync(Command, P4UserMap):
                         self.branchPrefixes = [ branchPrefix ]
 
                         parent = ""
-
-                        filesForCommit = branches[branch]
-
-                        if self.verbose:
-                            print("branch is %s" % branch)
 
                         mergeSourceDepotPaths = []
 
