@@ -2562,7 +2562,7 @@ class P4Sync(Command, P4UserMap):
                                      help="Keep entire BRANCH/DIR/SUBDIR prefix during import"),
                 optparse.make_option("--use-client-spec", dest="useClientSpec", action='store_true',
                                      help="Only sync files that are included in the Perforce Client Spec"),
-                optparse.make_option("--dry-run", dest="dryRyn", action='store_true',
+                optparse.make_option("--dry-run", dest="dryRun", action='store_true',
                                      help="Only read from perforce, do not write to git"),
                 optparse.make_option("--skip-file-content", dest="skipFileContent", action='store_true',
                                      help="Only handle commit&branching meta info, do not read/write files"),
@@ -3632,20 +3632,32 @@ class P4Sync(Command, P4UserMap):
 
     def openStreams(self):
         if self.dryRun:
-            self.importProcess = subprocess.Popen(["cat"],
-                                                stdin=subprocess.DEVNULL,
-                                                stdout=subprocess.DEVNULL,
-                                                stderr=subprocess.DEVNULL,
-                                                )
+            class Dummy:
+                def write(self,*args,**kwargs):
+                    pass
+                def read(self):
+                    return "DummyOutput"
+                def readline(self):
+                    return "DummyOutput"
+                def close(self):
+                    pass
+                def wait(self):
+                    return 0
+
+            self.importProcess = Dummy()
+            self.gitOutput = Dummy()
+            self.gitStream = Dummy()
+            self.gitError = Dummy()
+
         else:
             self.importProcess = subprocess.Popen(["git", "fast-import", "--done"],
                                                 stdin=subprocess.PIPE,
                                                 stdout=subprocess.PIPE,
                                                 stderr=subprocess.PIPE)
 
-        self.gitOutput = self.importProcess.stdout
-        self.gitStream = self.importProcess.stdin
-        self.gitError = self.importProcess.stderr
+            self.gitOutput = self.importProcess.stdout
+            self.gitStream = self.importProcess.stdin
+            self.gitError = self.importProcess.stderr
 
     def closeStreams(self):
         self.gitStream.write("done\n")
