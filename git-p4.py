@@ -3360,12 +3360,18 @@ class P4Sync(Command, P4UserMap):
 
         return ""
 
+    def branchPrefixFromBranch(self, branch):
+        if self.clientSpecDirs:
+            return self.clientSpecDirs.client_prefix + branch + "/"
+        else:
+            return self.depotPaths[0] + branch + "/"
+
     def importNewBranch(self, branch, maxChange):
         # make fast-import flush all changes to disk and update the refs using the checkpoint
         # command so that we can try to find the branch parent in the git history
         self.gitStream.write("checkpoint\n\n");
         self.gitStream.flush();
-        branchPrefix = self.depotPaths[0] + branch + "/"
+        branchPrefix = self.branchPrefixFromBranch(branch)
         range = "@1,%s" % maxChange
         #print "prefix" + branchPrefix
         changes = p4ChangesForPaths([branchPrefix], range, self.changes_block_size)
@@ -3374,11 +3380,11 @@ class P4Sync(Command, P4UserMap):
         firstChange = changes[0]
         #print "first change in branch: %s" % firstChange
         sourceBranch = self.knownBranches[branch]
-        sourceDepotPath = self.depotPaths[0] + sourceBranch
+        sourceBranchPrefix = self.branchPrefixFromBranch(sourceBranch)
         sourceRef = self.gitRefForBranch(sourceBranch)
         #print "source " + sourceBranch
 
-        branchParentChange = int(p4Cmd(["changes", "-m", "1", "%s...@1,%s" % (sourceDepotPath, firstChange)])["change"])
+        branchParentChange = int(p4Cmd(["changes", "-m", "1", "%s...@1,%s" % (sourceBranchPrefix, firstChange)])["change"])
         #print "branch parent: %s" % branchParentChange
         gitParent = self.gitCommitByP4Change(sourceRef, branchParentChange)
         if len(gitParent) > 0:
@@ -3415,6 +3421,7 @@ class P4Sync(Command, P4UserMap):
 
         mergeSourceDepotPaths = []
 
+        filelogPattern = self.branchPrefixFromBranch
         if self.clientSpecDirs:
             filelogPattern = self.clientSpecDirs.depotPathPrefix_from_branchName[branch] + "..."
         else:
@@ -3432,6 +3439,7 @@ class P4Sync(Command, P4UserMap):
 
         sourceBranch = None
         sourceChange = change
+        sourceChangeFileRevs = None
 
         for filelog in filelog_entries:
             if filelog['action0'] in [ "integrate", "branch" ]:
@@ -3473,7 +3481,15 @@ class P4Sync(Command, P4UserMap):
                         assert b != branch
                         sourceBranch = b
 
+                        result = p4CmdList(["changes", "-m", cmd, errors_as_exceptions=True)
+
                     assert sourceBranch == b # merging from multiple branches at once not yet tested
+
+                    if sourceChangeFiles == None or sourceChangeFileRevs[sourceDepotPath] > sourceRev:
+
+
+
+
 
         print("... resulting source branch: " + sourceBranch + "\n")
 
@@ -3529,11 +3545,7 @@ class P4Sync(Command, P4UserMap):
                             print("branch is %s" % branch)
 
                         ## HACK  --hwn
-                        if self.clientSpecDirs:
-                            branchPrefix = self.clientSpecDirs.client_prefix + branch + "/"
-                        else:
-                            branchPrefix = self.depotPaths[0] + branch + "/"
-                        self.branchPrefixes = [ branchPrefix ]
+                        self.branchPrefixes = [ branchPrefixFromBranch(branch) ]
 
                         parent = ""
 
